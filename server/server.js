@@ -1,39 +1,35 @@
-const express = require('express');
-const http = require('http');
-const {Server} = require('socket.io');
-const cors = require('cors');
+const http = require("http");
+const { Server } = require("socket.io");
+const Y = require("yjs");
 
-const app = express();
-app.use(cors());
-
-const server = http.createServer(app);
-
+const server = http.createServer();
 const io = new Server(server, {
-    cors:{
-        origin:"*",
-    },
+  cors: { origin: "*" },
 });
 
-let documentContent = "";
+const docs = new Map();
 
-io.on("connection", (socket)=>{
-    console.log("a user connected", socket.id);
+io.on("connection", (socket) => {
+  socket.on("join-document", (docId) => {
+    socket.join(docId);
 
-    socket.emit("load-document", documentContent);
+    if (!docs.has(docId)) {
+      docs.set(docId, new Y.Doc());
+    }
+    const ydoc = docs.get(docId);
 
-    socket.on("sent-changes",(delta)=>{
-        documentContent = delta;
-        socket.broadcast.emit("receive-changes", delta);
-    });
-
-
-    socket.on("disconnect", ()=>{
-        console.log("user disconnected", socket.id);
-    });
-
-});
-
-server.listen(5000, ()=>{
-    console.log("listening on:5000");
     
-})
+    const state = Y.encodeStateAsUpdate(ydoc);
+    socket.emit("sync", state);
+
+    socket.on("sync", (update) => {
+      const binaryUpdate = new Uint8Array(update);
+     
+      Y.applyUpdate(ydoc, binaryUpdate, "server");
+     
+      socket.to(docId).emit("sync", binaryUpdate);
+    });
+  });
+});
+
+server.listen(5000);
