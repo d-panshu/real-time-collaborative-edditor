@@ -1,14 +1,7 @@
-import Editor from "./Editor";
-import './App.css';
+import Editor from "./Editor.jsx";
 
 function App() {
-  return (
-    <div>
-       <h2>Real-time Collaborative Editor
-        <Editor />
-       </h2>
-    </div>
-  );
+  return <Editor />;
 }
 
 export default App;
